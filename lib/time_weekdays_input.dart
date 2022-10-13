@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:iot_boiler/time_input.dart';
@@ -12,7 +14,7 @@ class TimeWeekdaysInput extends StatefulWidget implements iData{
   static const MODE_EDIT = 2;
   late int mode;
   WidgetKeysManager keys = WidgetKeysManager();
-  late dynamic _widgetData = {};
+  late Map<String, dynamic> _widgetData = {};
   //late String id;
 
   TimeWeekdaysInput({super.key, required this.mode});
@@ -21,7 +23,19 @@ class TimeWeekdaysInput extends StatefulWidget implements iData{
 
   @override
   getData() {
-    return _widgetData;
+    print ("before ${_widgetData.toString()}");
+    const JsonEncoder encoder = JsonEncoder();
+    String r = encoder.convert(_widgetData);
+    print ("r ${r.toString()}");
+    const JsonDecoder decoder = JsonDecoder();
+    Map<String, dynamic> result =  decoder.convert(r);
+    //print ("after ${result.toString()}");
+    return result;
+  }
+
+  @override
+  setData(_d) {
+    _widgetData = _d;
   }
 
 }
@@ -97,10 +111,11 @@ class _TimeWeekdaysInputState extends State<TimeWeekdaysInput> {
     );
     print("mode = ${_state["mode"]}");
     print("data=${widget.key}");
+    print("values[0]=${values[0]}");
     widget._widgetData[WidgetKeysManager.getIDFromGlobalKey(widget.key as GlobalKey)] = {
       "id":WidgetKeysManager.getIDFromGlobalKey(widget.key as GlobalKey),
       "time_input": (time_input as iData).getData(),
-      "week_days": values
+      "week_days": {"sun":"${values[0]}","mon":"${values[1]}","tue":"${values[2]}","wed":"${values[3]}","thu":"${values[4]}","fri":"${values[5]}","sat":"${values[6]}"}
     };
     return (_state["mode"] == TimeWeekdaysInput.MODE_EDIT) ? editWidget : displayWidget;
   }

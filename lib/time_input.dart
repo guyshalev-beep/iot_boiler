@@ -6,14 +6,20 @@ import 'iData.dart';
 
 class TimeInput extends StatefulWidget implements iData{
   late int mode = -1;
-  late dynamic _widgetData = {};
+  late Map<String, dynamic> _widgetData = {};
   TimeInput({Key? key}) : super(key: key);
   @override
   State<TimeInput> createState() => _TimeInputState();
 
   @override
   getData() {
+    print (_widgetData);
     return _widgetData;
+  }
+
+  @override
+  setData(_d) {
+    _widgetData = _d;
   }
 }
 
@@ -73,7 +79,10 @@ class _TimeInputState extends State<TimeInput> {
         _buildTimePick("", true, startTime, (x) {
           setState(() {
             startTime = x;
-            widget._widgetData["start_time"] = startTime;
+            widget._widgetData["start_time"] = "${startTime.hour.toString()}:${startTime.minute.toString()}";
+            //widget._widgetData["start_time"]["hour"] = "${startTime.hour.toString()}";
+            //widget._widgetData["start_time"]["minutes"] = "${startTime.minute.toString()}";
+
             print("The picked time is: ${widget._widgetData}");
           });
         }),
@@ -81,15 +90,19 @@ class _TimeInputState extends State<TimeInput> {
         _buildTimePick("", true, endTime, (x) {
           setState(() {
             endTime = x;
-            widget._widgetData["end_time"] = endTime;
+            widget._widgetData["end_time"] = endTime.toString();
             print("The picked time is: $x");
           });
         }),
       ],
     );
-    print("isEdit1 = ${isEdit}" );
-    widget._widgetData["start_time"] =startTime;
-    widget._widgetData["end_time"] =endTime;
+    print("isEdit1 = ${isEdit}");
+    //widget._widgetData["start_time"] = startTime.hour;
+    //widget._widgetData["end_time"] =endTime.hour;
+
+    widget._widgetData["start_time"] = {"hour":startTime.hour, "minute":startTime.minute};
+    widget._widgetData["end_time"] = {"hour":endTime.hour, "minute":endTime.minute};
+
     return (isEdit) ? editWidget : displayWidget;
   }
 }

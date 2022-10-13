@@ -6,7 +6,7 @@ import 'iData.dart';
 
 class ThreeButtonsSwitch extends StatefulWidget implements iData{
   WidgetKeysManager keys = WidgetKeysManager();
-  dynamic _widgetData = {};
+  Map<String, dynamic> _widgetData = {};
 
   ThreeButtonsSwitch({ super.key});
   @override
@@ -17,6 +17,11 @@ class ThreeButtonsSwitch extends StatefulWidget implements iData{
   @override
   getData() {
     return _widgetData;
+  }
+
+  @override
+  setData(_d) {
+    _widgetData = _d;
   }
 }
 
