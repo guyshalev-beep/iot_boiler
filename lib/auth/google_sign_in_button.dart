@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iot_boiler/auth/user_info_screen.dart';
+import 'package:iot_boiler/boiler_app.dart';
 
 import 'authentication.dart';
 
@@ -43,9 +44,11 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
           if (user != null) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (context) => UserInfoScreen(
-                  user: user,
-                ),
+                builder: (context) =>
+                    MyApp(),
+                //     UserInfoScreen(
+                //   user: user,
+                // ),
               ),
             );
           }

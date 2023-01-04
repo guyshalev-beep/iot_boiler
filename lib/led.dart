@@ -19,7 +19,10 @@ class Led extends StatelessWidget implements iData{
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(_title),
+        Text(
+            _title,
+          style: Theme.of(context).textTheme.bodyText1
+        ),
         Container(
         width: 20.0,
         height: 20.0,
@@ -52,6 +55,6 @@ class Led extends StatelessWidget implements iData{
 
   @override
   setData(_d) {
-    _on = _d;
+    _on = (_d == "true");
   }
 }

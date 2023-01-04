@@ -19,16 +19,22 @@ class TimeInput extends StatefulWidget implements iData{
 
   @override
   setData(_d) {
+    if (_d == null) return;
     _widgetData = _d;
   }
 }
 
 class _TimeInputState extends State<TimeInput> {
   bool isEdit = false;
-  TimeOfDay startTime = TimeOfDay.now();
-  TimeOfDay endTime = TimeOfDay.now();
+
   @override
   Widget build(BuildContext context) {
+    TimeOfDay startTime = (widget._widgetData["start_time"]!=null)
+        ?TimeOfDay(hour:int.parse(widget._widgetData["start_time"]["hour"].toString()),minute:int.parse(widget._widgetData["start_time"]["minute"].toString()))
+        :TimeOfDay.now();
+    TimeOfDay endTime = (widget._widgetData["end_time"]!=null)
+        ?TimeOfDay(hour:int.parse(widget._widgetData["end_time"]["hour"].toString()),minute:int.parse(widget._widgetData["end_time"]["minute"].toString()))
+        :TimeOfDay.now();
     setState(() {});
     Future selectedTime(BuildContext context, bool ifPickedTime,
         TimeOfDay initialTime, Function(TimeOfDay) onTimePicked) async {
@@ -44,8 +50,9 @@ class _TimeInputState extends State<TimeInput> {
       return Row(
         children: [
           (title!="")?SizedBox(
-            width: 80,
+            width: 140,
             child: Text(
+              style: Theme.of(context).textTheme.bodyText2,
               title,
             ),
           ):SizedBox(),
@@ -57,7 +64,8 @@ class _TimeInputState extends State<TimeInput> {
             ),
             child: GestureDetector(
               child: Text(
-             "${currentTime.hour.toString()}:${currentTime.minute.toString()}",
+                style: Theme.of(context).textTheme.bodyText1,
+             "${currentTime.hour.toString().padLeft(2, '0')}:${currentTime.minute.toString().padLeft(2, '0')}",
               ),
               onTap: () {
                 selectedTime(context, ifPickedTime, currentTime, onTimePicked);
@@ -79,10 +87,9 @@ class _TimeInputState extends State<TimeInput> {
         _buildTimePick("", true, startTime, (x) {
           setState(() {
             startTime = x;
-            widget._widgetData["start_time"] = "${startTime.hour.toString()}:${startTime.minute.toString()}";
-            //widget._widgetData["start_time"]["hour"] = "${startTime.hour.toString()}";
-            //widget._widgetData["start_time"]["minutes"] = "${startTime.minute.toString()}";
-
+            //widget._widgetData["start_time"] = "${startTime.hour.toString()}:${startTime.minute.toString()}";
+            widget._widgetData["start_time"]["hour"] = startTime.hour;
+            widget._widgetData["start_time"]["minute"] = startTime.minute;
             print("The picked time is: ${widget._widgetData}");
           });
         }),
@@ -90,7 +97,9 @@ class _TimeInputState extends State<TimeInput> {
         _buildTimePick("", true, endTime, (x) {
           setState(() {
             endTime = x;
-            widget._widgetData["end_time"] = endTime.toString();
+            //widget._widgetData["end_time"] = endTime.format(context);
+            widget._widgetData["end_time"]["hour"] = endTime.hour;
+            widget._widgetData["end_time"]["minute"] = endTime.minute;
             print("The picked time is: $x");
           });
         }),

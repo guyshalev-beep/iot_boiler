@@ -54,7 +54,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: CustomColors.firebaseNavy,
-        title: Text("temp title"),
+        title: Text(
+            "BaabApp IOT",
+            style: Theme.of(context).textTheme.headline2,
+        ),
       ),
       body: SafeArea(
         child: Padding(

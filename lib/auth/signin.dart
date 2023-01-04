@@ -34,13 +34,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     Flexible(
                       flex: 1,
                       child: Image.asset(
-                        'assets/firebase_logo.png',
-                        height: 160,
+                        'assets/baablogo.png',
+                        height: 250,
                       ),
                     ),
                     SizedBox(height: 20),
                     Text(
-                      'FlutterFire',
+                      'BaabApp IOT',
                       style: TextStyle(
                         color: CustomColors.firebaseYellow,
                         fontSize: 40,

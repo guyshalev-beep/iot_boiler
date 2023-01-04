@@ -13,6 +13,7 @@ class SwitchIOT extends StatefulWidget implements iData{
   SwitchIOT({super.key});
 
 
+
   @override
   State<SwitchIOT> createState() => _SwitchIOTState();
 
@@ -42,22 +43,23 @@ class SwitchIOT extends StatefulWidget implements iData{
 }
 
 class _SwitchIOTState extends State<SwitchIOT> {
+
   @override
   Widget build(BuildContext context) {
     return Switch(
         //key: widget.key,
+
         value: widget._value,
         activeColor: Colors.green,
         inactiveThumbColor: Colors.red,
         inactiveTrackColor: Colors.red,
         onChanged: (bool value) {
-      print("switch changed ${widget.key}");
-      String id = WidgetKeysManager.getIDFromGlobalKey(widget.key as GlobalKey);
-      setState(() {
-        // light = value;
-        widget._value = value;
-      });
-    });
-
+          print("switch changed ${widget.key}");
+          String id = WidgetKeysManager.getIDFromGlobalKey(widget.key as GlobalKey);
+          setState(() {
+            // light = value;
+            widget._value = value;
+          });
+        });
   }
 }
