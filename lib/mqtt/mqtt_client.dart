@@ -1,10 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'dart:io';
 
 import '../notification/notification.dart';
 
-Future<MqttClient> connect() async {
+Future<MqttClient> connect(_log(String txt)) async {
+
   MqttServerClient client =
   MqttServerClient.withPort('broker.emqx.io', 'flutter_client', 1883);
   //MqttServerClient.withPort('wed4ec84.us-east-1.emqx.cloud', 'flutter_client', 15858);
@@ -43,7 +45,8 @@ Future<MqttClient> connect() async {
       MqttPublishPayload.bytesToStringAsString(message.payload.message);
       if (payload.startsWith("notify_")){
         String _msg = payload.substring(7);
-        NotificationManager.notify("Notification From Your Boiler", _msg);
+
+        //NotificationManager.notify("Notification From Your Boiler", _msg);
       }
       print('Received message:<$payload> from topic: ${c[0].topic}>');
 
@@ -53,6 +56,10 @@ Future<MqttClient> connect() async {
       print('----------------- published');
       final payload =
       MqttPublishPayload.bytesToStringAsString(message.payload.message);
+      if (payload.startsWith("notify_"))
+        _log(payload.substring(7));
+      else
+        _log(payload);
       print(
           'Published message: $payload to topic: ${message.variableHeader!.topicName}');
     });

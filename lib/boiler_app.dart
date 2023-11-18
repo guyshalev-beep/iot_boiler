@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -22,6 +21,37 @@ import 'number_picker.dart';
 main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
+}
+class Device{
+  final String name;
+  final String id;
+  late bool selected;
+  Device({
+    required String this.name,
+    required String this.id,
+    required bool this.selected
+  });
+  static fromJson(dynamic json){
+    return Device(
+      name:json.name,
+      id:json.id,
+      selected:(json.selected)?true:false
+    );
+  }
+  dynamic toJson(){
+    return {
+      "name": this.name,
+      "id": this.id,
+      "selected": this.selected
+    };
+  }
+  static fromMap(Map<dynamic,dynamic> map){
+    return Device(
+        name:map["name"],
+        id:map["id"],
+        selected:map["selected"],
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -106,6 +136,7 @@ class BoilerPage extends StatefulWidget {
 
   NotificationManager _notif = NotificationManager();
   dynamic _formData = {};
+  String devices_dropdownValue = "";
   final String title;
   late String _sync = "0";
 
@@ -126,8 +157,11 @@ class _BoilerPageState extends State<BoilerPage> {
   late Widget _ThreeButtonsSwitchV1, _boostButtonsSwitchV9, _ButoonV30;
   late String _textV31, _textV5,_textV30;
   late MqttClient client;
+  String deviceTime = "";
+  int deviceUpdateMillis = 0;
+  String _logtxt = 'This is our log';
   var topic = "esp8266/test-guys";
-
+  Device? selectedDevice;
 
   Future<void> _publish(String message) async {
     final builder = MqttClientPayloadBuilder();
@@ -146,20 +180,25 @@ class _BoilerPageState extends State<BoilerPage> {
   }
 
   @override
+  void updateLog(String x){
+    _logtxt = x;
+  }
   initState() {
     super.initState();
     NotificationManager.notificationInitState();
     print("------------------- initState");
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      getDataFromFirebase();
+      getDevicesFromFirebase();
+      //getDataFromFirebase();
     });
-    connect().then((value) {
+    connect(updateLog).then((value) {
       client = value;
       print(
           "------------------------------ MQTT conected ------------------------------");
     });
     print("about fdata");
     //print(_fdata);
+
     _ledV0 = Led(false, "On/Off");
     _ThreeButtonsSwitchV1 = ToggleButtonsSwitch(
         3, ["Open", "Close", "Timer"], [false, true, false],
@@ -187,8 +226,20 @@ class _BoilerPageState extends State<BoilerPage> {
       onPressed: () async {
         _textV30 = '{"30":{"id":30,"value":true}}';
         _textV31 =
-      //      '{"31":{"id":31,"value":"${TimeOfDay.now().hour.toString()}:${TimeOfDay.now().minute.toString()}"}}';
-        '{"31":{"id":31,"time":{"year":${DateTime.now().year},"month":${DateTime.now().month},"day":${DateTime.now().day},"hour":${DateTime.now().hour},"minute":${DateTime.now().minute},"second":${DateTime.now().second}}}}';
+        //      '{"31":{"id":31,"value":"${TimeOfDay.now().hour.toString()}:${TimeOfDay.now().minute.toString()}"}}';
+        '{"31":{"id":31,"time":{"year":${DateTime
+            .now()
+            .year},"month":${DateTime
+            .now()
+            .month},"day":${DateTime
+            .now()
+            .day},"hour":${DateTime
+            .now()
+            .hour},"minute":${DateTime
+            .now()
+            .minute},"second":${DateTime
+            .now()
+            .second}}}}';
 
         widget._formData = {
           ...(widget._formData as Map),
@@ -197,15 +248,20 @@ class _BoilerPageState extends State<BoilerPage> {
           ...(jsonDecode(
               (_textV30 != null) ? _textV31 : "{}"))
         };
-        DatabaseReference _ref =
-        FirebaseDatabase.instance.ref().child("test");
-        await _ref.set(widget._formData);
-        _publish("dosync");
-        },
+        // Cant see why we need to update the database in the initState
+        // if(selectedDevice != null) {
+        //   DatabaseReference _ref =
+        //   FirebaseDatabase.instance.ref().child(
+        //       "home/" + home_name + "/" + selectedDevice!.id);
+        //   await _ref.set(widget._formData);
+        //   _publish("dosync");
+        // }
+      },
     );
     _textV31 = "{}";
     _textV30 = '{"30":{"id":30,"value":false}}';
     _textV5 = "N/A";
+    widget.devices_dropdownValue = "None";
   }
 
   @override
@@ -213,36 +269,80 @@ class _BoilerPageState extends State<BoilerPage> {
     widget._notif.notificationDispose();
     super.dispose();
   }
+  String home_name = "shalev";
 
-  // Future<String> getDataFromFirebase1() async {
-  //   print("getDataFromFirebase");
-  //   DatabaseReference _ref = FirebaseDatabase.instance.ref().child("test");
-  //   DataSnapshot res = await _ref.get();
-  //   widget._formData = (res.value != null) ? jsonEncode(res.value) : {};
-  //   print("++++++++++++++++ init state1 ${jsonEncode(res.value)}");
-  //   setState(() {});
-  //   return jsonEncode(res.value);
-  // }
+  late Device connected_device;
+  List<Device> connected_devices = <Device>[Device(name:"None",id:"0",selected:false)];
 
+  getDevicesFromFirebase() async {
+    DatabaseReference _ref = FirebaseDatabase.instance.ref().child("home/"+home_name+"/devices");
+    _ref.onValue.listen((DatabaseEvent event) {
+      List<dynamic> _devices = event.snapshot.value as List<dynamic>;
+      connected_devices = <Device>[Device(name:"None",id:"None",selected:false)];
+      _devices.forEach((value) {
+          connected_devices.add(Device.fromMap(value));
+      });
+      getDataFromFirebase();
+    });
+  }
   getDataFromFirebase() async {
     print("getDataFromFirebase");
-    DatabaseReference _ref = FirebaseDatabase.instance.ref().child("test");
+
+    if (connected_devices != null && connected_devices.indexWhere((d) => d.selected) != -1) {
+      selectedDevice = connected_devices.firstWhere((d) => d.selected);
+    }
+    if (selectedDevice == null){
+      print("No Device is Selected.");
+      return;
+    }else
+      print('Device selected: ${selectedDevice!.id}');
+    // Get Data
+    DatabaseReference _ref = FirebaseDatabase.instance.ref().child("home/"+home_name+"/"+selectedDevice!.id+"/data");
     _ref.onValue.listen((DatabaseEvent event) {
       print("----=====-----===== firebase updated");
       final data = event.snapshot.value;
       updateWidgetData(data);
     });
-    // return jsonEncode(res.value);
+    // Get Temp
+    DatabaseReference _ref_temp = FirebaseDatabase.instance.ref().child("home/"+home_name+"/5");
+    _ref_temp.onValue.listen((DatabaseEvent event) {
+      print("----=====-----===== Temp updated");
+      final Map<dynamic,dynamic> data = event.snapshot.value as Map<dynamic,dynamic>;
+      //final temp = data["value"];
+      updateTempData(data["value"].toString());
+    });
+    // Get Device Data
+    DatabaseReference _ref_devicedata = FirebaseDatabase.instance.ref().child("home/"+home_name+"/"+selectedDevice!.id+"/device");
+    _ref_devicedata.onValue.listen((DatabaseEvent event) {
+      print("----=====-----===== firebase metadata updated");
+      final data = event.snapshot.value;
+      updateDevicedataWidgetData(data);
+    });
   }
 
+  updateTempData(String data) {
+    _textV5 = data;
+    setState(() {});
+  }
   updateWidgetData(data) {
     widget._formData = (data != null) ? jsonEncode(data) : {};
     setState(() {});
   }
-
+  updateDevicedataWidgetData(data) {
+    int x = int.parse(data["keepalive"]);
+    DateTime _deviceTime = DateTime.fromMillisecondsSinceEpoch(x*1000,isUtc:false);
+    deviceTime = '${_deviceTime.toLocal()} ${_deviceTime.timeZoneName}';
+    deviceUpdateMillis = DateTime.now().microsecondsSinceEpoch;
+    // widget._formData = (data != null) ? jsonEncode(data) : {};
+    // setState(() {});
+  }
   @override
   void setState(VoidCallback fn) {
-    widget._formData = jsonDecode(widget._formData.toString());
+    if (widget._formData is Map){
+      super.setState(fn);
+      return;
+    }
+      widget._formData = jsonDecode(widget._formData.toString());
     setWidgetsData();
     super.setState(fn);
   }
@@ -257,8 +357,8 @@ class _BoilerPageState extends State<BoilerPage> {
         widget._sync = widget._formData["sync"]["value"];
       if (widget._formData["0"] != null)
         (_ledV0 as iData).setData(widget._formData["0"]["value"]);
-      if (widget._formData["5"] != null)
-        _textV5 = widget._formData["5"]["value"].toString();
+      // if (widget._formData["5"] != null)
+      //   _textV5 = widget._formData["5"]["value"].toString();
       if (widget._formData["6"] != null)
         (_numberPickerV6 as iData).setData(widget._formData["6"]["value"]);
       if (widget._formData["7"] != null)
@@ -317,27 +417,93 @@ class _BoilerPageState extends State<BoilerPage> {
             child: Text(widget.title + "  " + " \u2103 " + _textV5,
                 style: Theme.of(context).textTheme.headline5)),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            _buildForm()
-            // FutureBuilder(
-            //   future: _fdata,
-            //   builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-            //     if (snapshot.hasError) {
-            //       return Text('Something wend wrong');
-            //     } else if (snapshot.hasData) {
-            //       print("Starting main page");
-            //       return _buildForm();//BoilerPage(title: 'דוד החימום של משפחת שלו');
-            //     } else {
-            //       return const Center(child: CircularProgressIndicator());
-            //     }
-            //   },
-            // ),
-            // _buildForm(),
-          ],
-        ),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: <Widget>[
+              _buildForm(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Container(
+                        height: 200,
+                        color: Colors.black,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                  'Select Device',
+                                  style: Theme.of(context).textTheme.headline2
+                              ),
+                              DropdownButton<String>(
+                                value: (connected_devices.indexWhere((d) => d.selected) != -1)?
+                                connected_devices.firstWhere((d) => d.selected).id:"None",
+                                icon: const Icon(Icons.arrow_downward),
+                                elevation: 16,
+                                style: const TextStyle(color: Colors.blue),
+                                underline: Container(
+                                  height: 2,
+                                  color: Colors.blue,
+                                ),
+                                onChanged: (String? value) async{
+                                  connected_devices.forEach((d) {d.selected = false; });
+                                  Device selected_device = connected_devices.firstWhere((Device d) => d.id == value!);
+                                  selected_device.selected = true;
+                                  try{
+                                    List<dynamic> _d = [];
+                                    connected_devices.forEach((Device e) =>   (e.id != "None")?_d.add(e.toJson()):"");
+                                    DatabaseReference _ref = FirebaseDatabase.instance.ref().child("home/"+home_name+"/devices/");
+                                    await _ref.set(_d);
+                                  }catch(e){
+                                    print(e);
+                                  }
+                                  setState(() { });
+                                  Navigator.pop(context);
+                                },
+                                items: connected_devices.map<DropdownMenuItem<String>>((Device device) {
+                                  return DropdownMenuItem<String>(
+                                    value: device.id,
+                                    child: Text(device.name),
+                                  );
+                                }).toList(),
+                              ),
+                              ElevatedButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                child: Text('Device<${(connected_devices.indexWhere((d) => d.selected) != -1)?
+                connected_devices.firstWhere((d) => d.selected).name:"None"}>')),
+              _ButoonV30]),
+              Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                    'Device Time: ${deviceTime}',
+                    style: Theme.of(context).textTheme.headline2,
+                  )
+                  ]),
+
+
+            ],
+          ),
+      ),
       ),
     );
   }
@@ -483,12 +649,24 @@ class _BoilerPageState extends State<BoilerPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [_boostButtonsSwitchV9]),
-                  SizedBox(height: 50),
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _logtxt,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ]
+                  ),
                   Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ButoonV30,
+
                         SizedBox(width: 50),
                         ElevatedButton(
                             style: TextButton.styleFrom(backgroundColor: (widget._sync == "1")?Colors.red:Colors.blue),
@@ -520,8 +698,17 @@ class _BoilerPageState extends State<BoilerPage> {
                             const JsonEncoder encoder = JsonEncoder();
                             String json = encoder.convert(widget._formData);
                             print(json);
+                            Device? selectedDevice;
+                            if (connected_devices != null && connected_devices.indexWhere((d) => d.selected) != -1) {
+                              selectedDevice = connected_devices.firstWhere((d) => d.selected);
+                            }
+                            if (selectedDevice == null){
+                              print("No Device is Selected.");
+                              return;
+                            }else
+                              print('Device selected: ${selectedDevice.id}');
                             DatabaseReference _ref =
-                                FirebaseDatabase.instance.ref().child("test");
+                                FirebaseDatabase.instance.ref().child("home/"+home_name+"/"+selectedDevice.id+"/data");
                             await _ref.set(widget._formData);
                             _publish("dosync");
                           },
@@ -533,7 +720,8 @@ class _BoilerPageState extends State<BoilerPage> {
                               Navigator.of(context)
                                   .pushReplacement(_routeToSignInScreen());
                           },
-                            child: Text("Log Out"))
+                            child: Text("Log Out")),
+
                       ])
                 ]));
   }
